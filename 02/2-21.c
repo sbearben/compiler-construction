@@ -3,25 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FALSE 0
-#define TRUE 1
+#include "helpers.h"
 
 /* allocate global variables */
 FILE *source;
 FILE *out;
 
-/* BUFLEN = length of the input buffer for
-   source code lines */
-#define BUFLEN 256
-
 #define MAXRESERVED 32
 
-int lineno = 0;
-
-char lineBuf[BUFLEN]; /* holds the current line */
-int linepos = 0;      /* current position in LineBuf */
-int bufsize = 0;      /* current size of buffer string */
-int EOF_flag = FALSE; /* corrects ungetNextChar behavior on EOF */
+/* MAXTOKENLEN is the maximum size of a token */
+#define MAXTOKENLEN 40
 
 /* lexeme of identifier or reserved word */
 char tokenString[MAXTOKENLEN + 1];
@@ -29,8 +20,9 @@ char tokenString[MAXTOKENLEN + 1];
 typedef enum {
    START,
    ENTERING_COMMENT,
-   IN_COMMENT,
-   EXITING_COMMENT,
+   IN_BLOCK_COMMENT,
+   IN_SINGLELINE_COMMENT,
+   EXITING_BLOCK_COMMENT,
    IN_IDENTIFIER,
    DONE,
 } StateType;
@@ -109,59 +101,14 @@ static struct {
     {"while", WHILE},
 };
 
-/* getNextChar fetches the next non-blank character
-   from lineBuf, reading in a new line if lineBuf is
-   exhausted */
-int getNextChar(FILE *source) {
-   if (!(linepos < bufsize)) {
-      lineno++;
-      if (fgets(lineBuf, BUFLEN - 1, source)) {
-         // fprintf(stdout, "%4d: %s", lineno, lineBuf);
-         bufsize = strlen(lineBuf);
-         linepos = 0;
-         return lineBuf[linepos++];
-      } else {
-         EOF_flag = TRUE;
-         return EOF;
-      }
-   } else
-      return lineBuf[linepos++];
-}
-
-/* ungetNextChar backtracks one character
-   in lineBuf */
-void ungetNextChar(void) {
-   if (!EOF_flag) linepos--;
-}
-
-int nextCommentState(StateType previousState, char c) {
-   switch (previousState) {
-      case START:
-         if (c == '/') {
-            return ENTERING_COMMENT;
-         }
-         break;
-      case ENTERING_COMMENT:
-         if (c == '*') {
-            return IN_COMMENT;
-         }
-         return START;
-      case IN_COMMENT:
-         if (c == '*') {
-            return EXITING_COMMENT;
-         }
-         break;
-      case EXITING_COMMENT:
-         if (c == '/') {
-            return DONE;
-         } else if (c == '*' || c == '\n') {
-            break;
-         }
-         return IN_COMMENT;
-      case 4:
-         return START;
-   }
-   return previousState;
+/* lookup an identifier to see if it is a reserved word */
+/* uses linear search */
+static int checkIfReservedWord(char *s) {
+   int i;
+   for (i = 0; i < MAXRESERVED; i++)
+      if (!strcmp(s, reservedWords[i].str))
+         return TRUE;
+   return FALSE;
 }
 
 int main(int argc, char *argv[]) {
@@ -184,8 +131,12 @@ int main(int argc, char *argv[]) {
    }
 
    int c;
+   int tokenStringIndex = 0;
+   int shouldWriteWord = FALSE;
    StateType state = START;
+
    while ((c = getNextChar(source)) != EOF) {
+      shouldWriteWord = FALSE;
       switch (state) {
          case START:
             if (c == '/') {
@@ -196,29 +147,58 @@ int main(int argc, char *argv[]) {
             break;
          case ENTERING_COMMENT:
             if (c == '*') {
-               state = IN_COMMENT;
-            }
-            return START;
-         case IN_COMMENT:
-            if (c == '*') {
-               state = EXITING_COMMENT;
+               state = IN_BLOCK_COMMENT;
+            } else if (c == '/') {
+               state = IN_SINGLELINE_COMMENT;
+            } else {
+               state = START;
             }
             break;
-         case EXITING_COMMENT:
-            if (c == '/') {
-               state = DONE;
-            } else if (c == '*' || c == '\n') {
-               break;
+         case IN_BLOCK_COMMENT:
+            if (c == '*') {
+               state = EXITING_BLOCK_COMMENT;
             }
-            state = IN_COMMENT;
+            break;
+         case IN_SINGLELINE_COMMENT:
+            if (c == '\n') {
+               state = START;
+            }
+            break;
+         case EXITING_BLOCK_COMMENT:
+            if (c == '/') {
+               state = START;
+            } else if (c == '*') {
+               break;
+            } else {
+               state = IN_BLOCK_COMMENT;
+            }
+            break;
          case IN_IDENTIFIER:
+            if (!isalpha(c)) {
+               ungetNextChar();
+               shouldWriteWord = TRUE;
+               state = START;
+            }
             break;
          case DONE:
             state = START;
       }
-      fputc(state == IN_COMMENT ? toupper(c) : c, out);
+      if (state != IN_IDENTIFIER) {
+         if (shouldWriteWord) {
+            tokenString[tokenStringIndex] = '\0';
+            int isReservedWord = checkIfReservedWord(tokenString);
+            for (int i = 0; i < tokenStringIndex; i++)
+               putc(isReservedWord ? toupper(tokenString[i]) : tokenString[i], out);
+            tokenStringIndex = 0;
+         } else {
+            putc(c, out);
+         }
+      } else {
+         if (tokenStringIndex <= MAXTOKENLEN) {
+            tokenString[tokenStringIndex++] = c;
+         }
+      }
    }
-
    fclose(source);
    fclose(out);
    return 0;

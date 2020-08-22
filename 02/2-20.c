@@ -3,25 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FALSE 0
-#define TRUE 1
+#include "helpers.h"
 
 /* allocate global variables */
 FILE *source;
 FILE *out;
-
-/* BUFLEN = length of the input buffer for
-   source code lines */
-#define BUFLEN 256
-
-#define MAXRESERVED 32
-
-int lineno = 0;
-
-char lineBuf[BUFLEN]; /* holds the current line */
-int linepos = 0;      /* current position in LineBuf */
-int bufsize = 0;      /* current size of buffer string */
-int EOF_flag = FALSE; /* corrects ungetNextChar behavior on EOF */
 
 typedef enum {
    START,
@@ -30,31 +16,6 @@ typedef enum {
    EXITING_COMMENT,
    DONE,
 } StateType;
-
-/* getNextChar fetches the next non-blank character
-   from lineBuf, reading in a new line if lineBuf is
-   exhausted */
-int getNextChar(FILE *source) {
-   if (!(linepos < bufsize)) {
-      lineno++;
-      if (fgets(lineBuf, BUFLEN - 1, source)) {
-         // fprintf(stdout, "%4d: %s", lineno, lineBuf);
-         bufsize = strlen(lineBuf);
-         linepos = 0;
-         return lineBuf[linepos++];
-      } else {
-         EOF_flag = TRUE;
-         return EOF;
-      }
-   } else
-      return lineBuf[linepos++];
-}
-
-/* ungetNextChar backtracks one character
-   in lineBuf */
-void ungetNextChar(void) {
-   if (!EOF_flag) linepos--;
-}
 
 int nextCommentState(StateType previousState, char c) {
    switch (previousState) {
