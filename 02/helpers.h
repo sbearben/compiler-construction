@@ -9,4 +9,6 @@
 extern int getNextChar(FILE* source);
 extern void ungetNextChar(void);
 
+extern int checkIfReservedWord(char* s);
+
 #endif
