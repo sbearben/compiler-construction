@@ -5,7 +5,7 @@
 /* Kenneth C. Louden                                */
 /****************************************************/
 
-#include "scan.h"
+#include "../../tiny-compiler/scan.h"
 
 #include "../../tiny-compiler/globals.h"
 #include "../../tiny-compiler/util.h"
@@ -56,7 +56,7 @@ static void ungetNextChar(void) {
 }
 
 /* lookup table of reserved words */
-static struct ReservedWord {
+struct ReservedWord {
    char* str;
    TokenType tok;
 };
@@ -112,6 +112,20 @@ static struct {
 
 static int wordTableInitialized = FALSE;
 
+// 2-27b - Hash value for a string of all lowercase alpha characters
+static long long computeHash(char* s) {
+   const int p = 31;
+   const int m = 1e9 + 9;
+   long long hash_value = 0;
+   long long p_pow = 1;
+
+   while (*s) {
+      hash_value = (hash_value + (*s++ - 'a' + 1) * p_pow) % m;
+      p_pow = (p_pow * p) % m;
+   }
+   return hash_value;
+}
+
 static void initializeReservedWordTable() {
    for (int i = 0; i < MAXRESERVED; i++) {
       reservedWordHashItems[i].key = computeHash(reservedWords[i].str);
@@ -126,20 +140,6 @@ static TokenType reservedHashLookup(char* s) {
       if (identifierHash == reservedWordHashItems[i].key)
          return reservedWordHashItems[i].word.tok;
    return ID;
-}
-
-// 2-27b - Hash value for a string of all lowercase alpha characters
-static long long computeHash(char* s) {
-   const int p = 31;
-   const int m = 1e9 + 9;
-   long long hash_value = 0;
-   long long p_pow = 1;
-
-   while (*s) {
-      hash_value = (hash_value + (*s++ - 'a' + 1) * p_pow) % m;
-      p_pow = (p_pow * p) % m;
-   }
-   return hash_value;
 }
 
 /****************************************/
@@ -266,7 +266,7 @@ getToken(void) { /* index for storing into tokenString */
       if (state == DONE) {
          tokenString[tokenStringIndex] = '\0';
          if (currentToken == ID)
-            currentToken = reservedLookup(tokenString);
+            currentToken = reservedHashLookup(tokenString);
       }
    }
    if (TraceScan) {
