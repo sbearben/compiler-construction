@@ -1,9 +1,10 @@
 cc = gcc
 
-CFLAGS = 
+CFLAGS = -Wall -I.
+
 
 tiny: main.o util.o scan.o parse.o symtab.o analyze.o code.o cgen.o
-	gcc -g main.o
+	gcc -o tiny main.o util.o scan.o parse.o symtab.o analyze.o code.o cgen.o
 
 main.o: main.c globals.h util.h scan.h parse.h analyze.h cgen.h
 	gcc -g -c main.c

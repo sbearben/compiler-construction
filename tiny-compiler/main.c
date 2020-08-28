@@ -45,7 +45,7 @@ int TraceCode = FALSE;
 
 int Error = FALSE;
 
-main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
    TreeNode* syntaxTree;
    char pgm[120]; /* source code file name */
    if (argc != 2) {
@@ -81,9 +81,9 @@ main(int argc, char* argv[]) {
    }
 #if !NO_CODE
    if (!Error) {
-      char *codefile;
+      char* codefile;
       int fnlen = strcspn(pgm, ".");
-      codefile = (char *)calloc(fnlen + 4, sizeof(char));
+      codefile = (char*)calloc(fnlen + 4, sizeof(char));
       strncpy(codefile, pgm, fnlen);
       strcat(codefile, ".tm");
       code = fopen(codefile, "w");
