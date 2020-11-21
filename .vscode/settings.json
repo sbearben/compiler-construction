@@ -4,6 +4,9 @@
     "__string": "c",
     "algorithm": "c",
     "functional": "c",
-    "unordered_map": "c"
+    "unordered_map": "c",
+    "__locale": "c",
+    "cctype": "c",
+    "locale": "c"
   }
 }
