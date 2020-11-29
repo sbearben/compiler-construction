@@ -28,7 +28,6 @@ typedef enum {
 /* function prototypes for recursive calls */
 int lexp(void);
 int lexpSeq(OpKind opKind);
-int factor(void);
 
 void error(void) {
    fprintf(stderr, "Error - last token: %c\n", token);
