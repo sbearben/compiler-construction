@@ -10,6 +10,7 @@
    Outputs "Error" or the result.
 */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
