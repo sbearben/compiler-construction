@@ -1,0 +1,3 @@
+This was some interesting code attached to these two articles:
+	1. https://swtch.com/~rsc/regexp/regexp1.html
+	2. https://swtch.com/~rsc/regexp/regexp2.html
