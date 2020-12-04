@@ -2,3 +2,4 @@
 *.tm
 out.c
 *.DS_Store
+*.pdf
