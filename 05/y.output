@@ -1,0 +1,193 @@
+Grammar
+
+    0 $accept: command $end
+
+    1 command: exp
+
+    2 exp: exp '+' term
+    3    | exp '-' term
+    4    | term
+
+    5 term: term '*' factor
+    6     | factor
+
+    7 factor: NUMBER
+    8       | '(' exp ')'
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+'(' (40) 8
+')' (41) 8
+'*' (42) 5
+'+' (43) 2
+'-' (45) 3
+error (256)
+NUMBER (258) 7
+
+
+Nonterminals, with rules where they appear
+
+$accept (9)
+    on left: 0
+command (10)
+    on left: 1, on right: 0
+exp (11)
+    on left: 2 3 4, on right: 1 2 3 8
+term (12)
+    on left: 5 6, on right: 2 3 4 5
+factor (13)
+    on left: 7 8, on right: 5 6
+
+
+state 0
+
+    0 $accept: . command $end
+
+    NUMBER  shift, and go to state 1
+    '('     shift, and go to state 2
+
+    command  go to state 3
+    exp      go to state 4
+    term     go to state 5
+    factor   go to state 6
+
+
+state 1
+
+    7 factor: NUMBER .
+
+    $default  reduce using rule 7 (factor)
+
+
+state 2
+
+    8 factor: '(' . exp ')'
+
+    NUMBER  shift, and go to state 1
+    '('     shift, and go to state 2
+
+    exp     go to state 7
+    term    go to state 5
+    factor  go to state 6
+
+
+state 3
+
+    0 $accept: command . $end
+
+    $end  shift, and go to state 8
+
+
+state 4
+
+    1 command: exp .
+    2 exp: exp . '+' term
+    3    | exp . '-' term
+
+    '+'  shift, and go to state 9
+    '-'  shift, and go to state 10
+
+    $default  reduce using rule 1 (command)
+
+
+state 5
+
+    4 exp: term .
+    5 term: term . '*' factor
+
+    '*'  shift, and go to state 11
+
+    $default  reduce using rule 4 (exp)
+
+
+state 6
+
+    6 term: factor .
+
+    $default  reduce using rule 6 (term)
+
+
+state 7
+
+    2 exp: exp . '+' term
+    3    | exp . '-' term
+    8 factor: '(' exp . ')'
+
+    '+'  shift, and go to state 9
+    '-'  shift, and go to state 10
+    ')'  shift, and go to state 12
+
+
+state 8
+
+    0 $accept: command $end .
+
+    $default  accept
+
+
+state 9
+
+    2 exp: exp '+' . term
+
+    NUMBER  shift, and go to state 1
+    '('     shift, and go to state 2
+
+    term    go to state 13
+    factor  go to state 6
+
+
+state 10
+
+    3 exp: exp '-' . term
+
+    NUMBER  shift, and go to state 1
+    '('     shift, and go to state 2
+
+    term    go to state 14
+    factor  go to state 6
+
+
+state 11
+
+    5 term: term '*' . factor
+
+    NUMBER  shift, and go to state 1
+    '('     shift, and go to state 2
+
+    factor  go to state 15
+
+
+state 12
+
+    8 factor: '(' exp ')' .
+
+    $default  reduce using rule 8 (factor)
+
+
+state 13
+
+    2 exp: exp '+' term .
+    5 term: term . '*' factor
+
+    '*'  shift, and go to state 11
+
+    $default  reduce using rule 2 (exp)
+
+
+state 14
+
+    3 exp: exp '-' term .
+    5 term: term . '*' factor
+
+    '*'  shift, and go to state 11
+
+    $default  reduce using rule 3 (exp)
+
+
+state 15
+
+    5 term: term '*' factor .
+
+    $default  reduce using rule 5 (term)
