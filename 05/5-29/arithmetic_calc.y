@@ -4,13 +4,15 @@
 
 int yylex();
 int yyerror(char *s);
+
+#define YYSTYPE double
 %}
 
 %token NUMBER
 
 %%
 
-command : exp   { printf("%d\n", $1); }
+command : exp   { printf("%lf\n", $1); }
       ; /* allows printing of the result */
 
 exp   : exp '+' term {$$ = $1 + $3;}
@@ -38,7 +40,7 @@ int yylex(void) {
   while ((c = getchar()) == ' ');
   if (isdigit(c)) {
     ungetc(c, stdin);
-    scanf("%d", &yylval);
+    scanf("%lf", &yylval);
     return NUMBER;
   }
   // makes the parse stop
