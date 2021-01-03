@@ -1,6 +1,9 @@
 %{
 #include <stdio.h>
 #include <ctype.h>
+
+int yylex();
+int yyerror(char *s);
 %}
 
 %token NUMBER
@@ -17,13 +20,15 @@ exp   : exp '+' term {$$ = $1 + $3;}
 
 term  : term '*' factor {$$ = $1 * $3;}
       | factor {$$ = $1;}
+      ;
 
 factor   : NUMBER      {$$ = $1;}
          | '(' exp ')' {$$ = $2;}
+         ;
 
 %%
 
-main() {
+int main() {
   return yyparse();
 }
 

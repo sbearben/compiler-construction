@@ -3,3 +3,5 @@
 out.c
 *.DS_Store
 *.pdf
+*.tab.c
+*.yy.c

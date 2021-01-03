@@ -1,10 +1,11 @@
 %{
 #include <stdio.h>
 #include <ctype.h>
+
+int yylex();
+int yyerror(char *s);
+
 %}
-
-%token NUMBER
-
 %%
 
 command : exp   { printf("%d\n", $1); }
@@ -17,13 +18,21 @@ exp   : exp '+' term {$$ = $1 + $3;}
 
 term  : term '*' factor {$$ = $1 * $3;}
       | factor {$$ = $1;}
+      ;
 
-factor   : NUMBER      {$$ = $1;}
+factor   : number      {$$ = $1;}
          | '(' exp ')' {$$ = $2;}
+         ;
+
+number  : number digit { $$ = ($1 * 10) + $2; }
+        | digit { $$ = $1; }
+        ;
+
+digit  : '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
 %%
 
-main() {
+int main() {
   return yyparse();
 }
 
@@ -32,9 +41,9 @@ int yylex(void) {
   // eliminate blanks
   while ((c = getchar()) == ' ');
   if (isdigit(c)) {
-    ungetc(c, stdin);
-    scanf("%d", &yylval);
-    return NUMBER;
+    // found below online, is the idea that it's more memory efficient?
+    // *((int*)&yylval) = c - '0';
+    yylval = c - '0';
   }
   // makes the parse stop
   if (c == '\n') return 0;
