@@ -6,9 +6,10 @@
 /* Kenneth C. Louden                                */
 /****************************************************/
 
+#include "analyze.h"
+
 #include "globals.h"
 #include "symtab.h"
-#include "analyze.h"
 
 /* counter for variable memory locations */
 static int location = 0;
@@ -17,143 +18,159 @@ static int location = 0;
  * syntax tree traversal routine:
  * it applies preProc in preorder and postProc 
  * in postorder to tree pointed to by t
+ * - takes to procedures as params (as well as the syntax tree),
+ *   one to perform preorder processing of each node and one to
+ *   perform pos-order processing
+ * - to obtain a preorder traversel, we need to define a procedure that provides
+ *   preorder processing and pass it to `traverse` as `preProc`, while passing
+ *   a "do nothing" procedure as postProc. In the case of the TINY symbol table,
+ *   the pre-order processor is called `insertNode`, since it performs insertions
+ *   into the symbol table. The "do nothing" procedure is called `nullProc` and
+ *   is defined with an empty body. Within `buildSymTab`, this preorder call
+ *   is accomplished by `traverse(syntaxTree, insertNode, nullProc);`
+ * - similarly, the post-order traversal required by `typeCheck` can be achieved
+ *   by the single call `traverse(syntaxTree, nullProc, checkNode);`, where
+ *   `checkNode` is an appropriately defined procedure that computes and checks
+ *   the type at each node.
  */
-static void traverse( TreeNode * t,
-               void (* preProc) (TreeNode *),
-               void (* postProc) (TreeNode *) )
-{ if (t != NULL)
-  { preProc(t);
-    { int i;
-      for (i=0; i < MAXCHILDREN; i++)
-        traverse(t->child[i],preProc,postProc);
-    }
-    postProc(t);
-    traverse(t->sibling,preProc,postProc);
-  }
+static void traverse(TreeNode *t,
+                     void (*preProc)(TreeNode *),
+                     void (*postProc)(TreeNode *)) {
+   if (t != NULL) {
+      preProc(t);
+      {
+         int i;
+         for (i = 0; i < MAXCHILDREN; i++)
+            traverse(t->child[i], preProc, postProc);
+      }
+      postProc(t);
+      traverse(t->sibling, preProc, postProc);
+   }
 }
 
 /* nullProc is a do-nothing procedure to 
  * generate preorder-only or postorder-only
  * traversals from traverse
  */
-static void nullProc(TreeNode * t)
-{ if (t==NULL) return;
-  else return;
+static void nullProc(TreeNode *t) {
+   if (t == NULL)
+      return;
+   else
+      return;
 }
 
 /* Procedure insertNode inserts 
  * identifiers stored in t into 
  * the symbol table 
  */
-static void insertNode( TreeNode * t)
-{ switch (t->nodekind)
-  { case StmtK:
-      switch (t->kind.stmt)
-      { case AssignK:
-        case ReadK:
-          if (st_lookup(t->attr.name) == -1)
-          /* not yet in table, so treat as new definition */
-            st_insert(t->attr.name,t->lineno,location++);
-          else
-          /* already in table, so ignore location, 
-             add line number of use only */ 
-            st_insert(t->attr.name,t->lineno,0);
-          break;
-        default:
-          break;
-      }
-      break;
-    case ExpK:
-      switch (t->kind.exp)
-      { case IdK:
-          if (st_lookup(t->attr.name) == -1)
-          /* not yet in table, so treat as new definition */
-            st_insert(t->attr.name,t->lineno,location++);
-          else
-          /* already in table, so ignore location, 
-             add line number of use only */ 
-            st_insert(t->attr.name,t->lineno,0);
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
-  }
+static void insertNode(TreeNode *t) {
+   switch (t->nodekind) {
+      case StmtK:
+         switch (t->kind.stmt) {
+            case AssignK:
+            case ReadK:
+               if (st_lookup(t->attr.name) == -1)
+                  /* not yet in table, so treat as new definition */
+                  st_insert(t->attr.name, t->lineno, location++);
+               else
+                  /* already in table, so ignore location, 
+             add line number of use only */
+                  st_insert(t->attr.name, t->lineno, 0);
+               break;
+            default:
+               break;
+         }
+         break;
+      case ExpK:
+         switch (t->kind.exp) {
+            case IdK:
+               if (st_lookup(t->attr.name) == -1)
+                  /* not yet in table, so treat as new definition */
+                  st_insert(t->attr.name, t->lineno, location++);
+               else
+                  /* already in table, so ignore location, 
+             add line number of use only */
+                  st_insert(t->attr.name, t->lineno, 0);
+               break;
+            default:
+               break;
+         }
+         break;
+      default:
+         break;
+   }
 }
 
 /* Function buildSymtab constructs the symbol 
  * table by preorder traversal of the syntax tree
  */
-void buildSymtab(TreeNode * syntaxTree)
-{ traverse(syntaxTree,insertNode,nullProc);
-  if (TraceAnalyze)
-  { fprintf(listing,"\nSymbol table:\n\n");
-    printSymTab(listing);
-  }
+void buildSymtab(TreeNode *syntaxTree) {
+   traverse(syntaxTree, insertNode, nullProc);
+   if (TraceAnalyze) {
+      fprintf(listing, "\nSymbol table:\n\n");
+      printSymTab(listing);
+   }
 }
 
-static void typeError(TreeNode * t, char * message)
-{ fprintf(listing,"Type error at line %d: %s\n",t->lineno,message);
-  Error = TRUE;
+static void typeError(TreeNode *t, char *message) {
+   fprintf(listing, "Type error at line %d: %s\n", t->lineno, message);
+   Error = TRUE;
 }
 
 /* Procedure checkNode performs
  * type checking at a single tree node
  */
-static void checkNode(TreeNode * t)
-{ switch (t->nodekind)
-  { case ExpK:
-      switch (t->kind.exp)
-      { case OpK:
-          if ((t->child[0]->type != Integer) ||
-              (t->child[1]->type != Integer))
-            typeError(t,"Op applied to non-integer");
-          if ((t->attr.op == EQ) || (t->attr.op == LT))
-            t->type = Boolean;
-          else
-            t->type = Integer;
-          break;
-        case ConstK:
-        case IdK:
-          t->type = Integer;
-          break;
-        default:
-          break;
-      }
-      break;
-    case StmtK:
-      switch (t->kind.stmt)
-      { case IfK:
-          if (t->child[0]->type == Integer)
-            typeError(t->child[0],"if test is not Boolean");
-          break;
-        case AssignK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"assignment of non-integer value");
-          break;
-        case WriteK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"write of non-integer value");
-          break;
-        case RepeatK:
-          if (t->child[1]->type == Integer)
-            typeError(t->child[1],"repeat test is not Boolean");
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
-
-  }
+static void checkNode(TreeNode *t) {
+   switch (t->nodekind) {
+      case ExpK:
+         switch (t->kind.exp) {
+            case OpK:
+               if ((t->child[0]->type != Integer) ||
+                   (t->child[1]->type != Integer))
+                  typeError(t, "Op applied to non-integer");
+               if ((t->attr.op == EQ) || (t->attr.op == LT))
+                  t->type = Boolean;
+               else
+                  t->type = Integer;
+               break;
+            case ConstK:
+            case IdK:
+               t->type = Integer;
+               break;
+            default:
+               break;
+         }
+         break;
+      case StmtK:
+         switch (t->kind.stmt) {
+            case IfK:
+               if (t->child[0]->type == Integer)
+                  typeError(t->child[0], "if test is not Boolean");
+               break;
+            case AssignK:
+               if (t->child[0]->type != Integer)
+                  typeError(t->child[0], "assignment of non-integer value");
+               break;
+            case WriteK:
+               if (t->child[0]->type != Integer)
+                  typeError(t->child[0], "write of non-integer value");
+               break;
+            case RepeatK:
+               if (t->child[1]->type == Integer)
+                  typeError(t->child[1], "repeat test is not Boolean");
+               break;
+            default:
+               break;
+         }
+         break;
+      default:
+         break;
+   }
 }
 
 /* Procedure typeCheck performs type checking 
  * by a postorder syntax tree traversal
  */
-void typeCheck(TreeNode * syntaxTree)
-{ traverse(syntaxTree,nullProc,checkNode);
+void typeCheck(TreeNode *syntaxTree) {
+   traverse(syntaxTree, nullProc, checkNode);
 }
