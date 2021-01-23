@@ -20,9 +20,9 @@
 char token;  // global token variable
 
 typedef enum {
-   Plus,
-   Minus,
-   Times
+   Plus = '+',
+   Minus = '-',
+   Times = '*'
 } OpKind;
 
 typedef enum {
@@ -152,7 +152,14 @@ int calculateValue(SyntaxTree node) {
    return node->val;
 };
 
-void printPostFixExp() {
+void printPostFixExp(SyntaxTree node) {
+   if (node->kind == OpK) {
+      printPostFixExp(node->lchild);
+      printPostFixExp(node->rchild);
+      printf("%c ", node->op);
+   } else {
+      printf("%d ", node->val);
+   }
 }
 
 int main() {
@@ -161,7 +168,9 @@ int main() {
    result = expression();
    if (token == '\n') {  // check for end of line
       printf("Result = %d\n", calculateValue(result));
-      printPostFixExp();
+      printf("Postfix translation: ");
+      printPostFixExp(result);
+      printf("\n");
    } else
       error();  // extraneous chars on line
    return 0;
